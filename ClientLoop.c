@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include <netinet/in.h>   // for sockaddr_in, htons, INADDR_ANY
-#include <arpa/inet.h>    // for htons(), inet_addr(), etc.
+#include <netinet/in.h>  
+#include <arpa/inet.h>    
 #include <stdlib.h>
 #include <sys/param.h>
 #include <math.h>
@@ -17,12 +17,13 @@
 
 #define BUFFER_SIZE 1024
 
-long getFileSize(const char *filename) {
+long getFileSize(const char *filename) 
+{
     struct stat st;
     if (stat(filename, &st) == 0)
         return st.st_size;
     else
-        return -1; // error
+        return -1;
 }
 
 void ClientLoop(int clientSocket, char *filePaths[],int fileCount)
@@ -46,8 +47,12 @@ void ClientLoop(int clientSocket, char *filePaths[],int fileCount)
 
         /* Header */
         unsigned char headerBuffer[16];
-        memcpy(headerBuffer, &fileNameSize, sizeof(unsigned long));
-        memcpy(headerBuffer + 8, &fileSize, sizeof(unsigned long));
+        for (int j = 0; j < 8; j++) {
+            headerBuffer[7 - j] = (unsigned char)((fileNameSize >> (j * 8)) & 0xFF);
+        }
+        for (int j = 0; j < 8; j++) {
+            headerBuffer[15 - j] = (unsigned char)((fileSize >> (j * 8)) & 0xFF);
+        }
         write(clientSocket,headerBuffer,16);
 
         /*File Name*/
@@ -55,7 +60,6 @@ void ClientLoop(int clientSocket, char *filePaths[],int fileCount)
 
         /* Data */
         unsigned char buffer[BUFFER_SIZE];
-        int bytesRead;
         int totalBytesRead=0;
         while(true)
         {
@@ -67,12 +71,11 @@ void ClientLoop(int clientSocket, char *filePaths[],int fileCount)
             }
             totalBytesRead+=bytesRead;
             
-            if (totalBytesRead >= BUFFER_SIZE - (BUFFER_SIZE / 10))// Send the data if buffer almost full
+            if (totalBytesRead >= BUFFER_SIZE - (BUFFER_SIZE / 10))// Send the data if buffer is almost full
             {
                 write(clientSocket,buffer,totalBytesRead);
                 totalBytesRead=0;
             }
-
         }
 
         printf("File %s succesfully send\n",fileName);

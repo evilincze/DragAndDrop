@@ -50,8 +50,7 @@ void runAsServer()
     {
         int clientSocket=accept(mysock,NULL,NULL);
         printf("Connection established\n");
-        while(true)
-            ServerLoop(clientSocket);
+        ServerLoop(clientSocket);
         printf("Connection ended\n");
     }
 }
@@ -77,7 +76,7 @@ int FileOrFolder(char *filePath)
     }
 }
 
-int FindAllFiles(char *folderPath,FilesStruct *files,int *fileCount)
+int FindAllFiles(char *folderPath,FilesStruct *files)
 {
     DIR *dir = opendir(folderPath);
     if (!dir) {
@@ -87,7 +86,6 @@ int FindAllFiles(char *folderPath,FilesStruct *files,int *fileCount)
 
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
-        // Skip "." and ".."
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
 
@@ -102,10 +100,16 @@ int FindAllFiles(char *folderPath,FilesStruct *files,int *fileCount)
 
         if (S_ISREG(st.st_mode))// Is file 
         {
-            char *fullPath = malloc(strlen(folderPath) + 1 + strlen(entry->d_name) + 1);
-            snprintf(fullPath, sizeof(fullPath), "%s/%s", folderPath, entry->d_name);
+            size_t len = strlen(folderPath) + 1 + strlen(entry->d_name) + 1; 
+            char *fullPath = malloc(len);
+            if (!fullPath) {
+                perror("malloc failed");
+                exit(1);
+            }
+
+            snprintf(fullPath, len, "%s/%s", folderPath, entry->d_name);
+
             pushBack(files,fullPath);
-            (*fileCount)++;
         } 
 
     }
@@ -119,9 +123,8 @@ void runAsClient(int argn,char *args[])
     struct sockaddr_in myadd;
     myadd.sin_family=AF_INET;
     myadd.sin_port=htons(11000);
-    //myadd.sin_addr.s_addr=INADDR_ANY;
 
-    inet_pton(AF_INET,ip,(struct sockaddr*) &myadd);
+    inet_pton(AF_INET,ip,&myadd.sin_addr);
 
     if(mysock == -1)
     {
@@ -134,21 +137,30 @@ void runAsClient(int argn,char *args[])
         return;
     }
 
-    int fileCount=0;
     FilesStruct files;
     initFiles(&files);
-    for(int i=3;i<argn-1;i++)
+    for(int i=3;i<argn;i++)
     {
+        printf("Trying filePath:%s\n",args[i]);
         if(FileOrFolder(args[i]) == 0)
-            pushBack(&files,args[i]);
-        if(FileOrFolder(args[i]) ==1)
-            FindAllFiles(args[i],&files,&fileCount);
+        {
+            char* f = (char*)malloc(sizeof(char)*strlen(args[i]));
+            if (!f) 
+            {
+                perror("malloc failed");
+                exit(1);
+            }
+            strcpy(f,args[i]);
+            pushBack(&files,f);
+        }
+        if(FileOrFolder(args[i]) == 1)
+            FindAllFiles(args[i],&files);
     }
 
-    ClientLoop(mysock,files.files,fileCount);
+    ClientLoop(mysock,files.files,files.size);
     freeFiles(&files);
-    printf("All files send, in order to send more, please enter the path or type exit to leave:\n");
-    //...
+    printf("All files send\n");
+    close(mysock);
 }
 
 int main(int argn, char* args[])

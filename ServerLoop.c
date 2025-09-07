@@ -8,8 +8,8 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include <netinet/in.h>   // for sockaddr_in, htons, INADDR_ANY
-#include <arpa/inet.h>    // for htons(), inet_addr(), etc.
+#include <netinet/in.h>  
+#include <arpa/inet.h>    
 #include <stdlib.h>
 #include <sys/param.h>
 #include <math.h>
@@ -38,40 +38,40 @@ void ServerLoop(int clientSocket)
             break;
         for(int i=0;i<bytesRead;i++)
         {
-            if(totalBytesRead < 16)//reading header
+            if(totalBytesRead < 16)// Reading header
             {
                 headerBuffer[totalBytesRead] = buffer[i];
             }
-            if(totalBytesRead == 15)//process header
+            if(totalBytesRead == 15)// Process header
             {
                 ProcessHeader(headerBuffer,&fileNameLen,&fileLen);
                 fileName = (char*) malloc(sizeof(char)*fileNameLen +1);
             }
-            if(totalBytesRead > 15 && totalBytesRead <= (fileNameLen + 15))//reading filename
+            if(totalBytesRead > 15 && totalBytesRead <= (fileNameLen + 15))// Reading filename
             {
                 fileName[totalBytesRead-16] = buffer[i];
             }
-            if(totalBytesRead == (fileNameLen + 15))//open file
+            if(totalBytesRead == (fileNameLen + 15))// Open file
             {
                 fileName[fileNameLen]='\0';
                 printf("Reading file %s\n",fileName);
                 CreateFile(fileName,filePath,&outputFile);
             }
-            if(totalBytesRead > (fileNameLen + 15) && totalBytesRead <= (15+fileNameLen+fileLen))//write into file
+            if(totalBytesRead > (fileNameLen + 15) && totalBytesRead <= (15+fileNameLen+fileLen))// Write into file
             {
-                /* buffering the data to be written */
+                /* Buffering the data to be written */
                 bufferForData[bufferForDataId]=buffer[i];
                 bufferForDataId++;
-                if(bufferForDataId == BUFFER_SIZE)// write the data down
+                if(bufferForDataId == BUFFER_SIZE)// Write the data down
                 {
                     write(outputFile,bufferForData,bufferForDataId);
                     bufferForDataId=0;
                 }
             }
 
-            if(totalBytesRead == (15+fileNameLen+fileLen))//file transmited
+            if(totalBytesRead == (15+fileNameLen+fileLen))// File transmited
             {
-                /* write down the remaining data */
+                /* Write down the remaining data */
                 write(outputFile,bufferForData,bufferForDataId);
                 bufferForDataId=0;
 

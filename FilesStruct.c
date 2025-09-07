@@ -7,7 +7,7 @@
 // Initialize
 void initFiles(FilesStruct *v) {
     v->size = 0;
-    v->capacity = 20; // initial capacity
+    v->capacity = 20; // Initial capacity
     v->files = (char **)malloc(sizeof(char*) * v->capacity);
 }
 
@@ -28,9 +28,9 @@ void pushBack(FilesStruct *v, char *file) {
 // Free memory
 void freeFiles(FilesStruct *v) {
     for (int i = 0; i < v->size; i++) {
-        free(v->files[i]);  // free each string
+        free(v->files[i]);  
     }
-    free(v->files);        // free array of pointers
+    free(v->files);        
     v->files = NULL;
     v->size = 0;
     v->capacity = 0;
