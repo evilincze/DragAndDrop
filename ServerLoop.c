@@ -15,9 +15,8 @@
 #include <math.h>
 
 #define BUFFER_SIZE 1024
-char *filePath="/home/evilin/Downloads";
 
-void ServerLoop(int clientSocket)
+void ServerLoop(int clientSocket,char *filePath)
 {
     unsigned char buffer[BUFFER_SIZE];
     unsigned char bufferForData[BUFFER_SIZE];

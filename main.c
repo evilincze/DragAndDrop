@@ -19,7 +19,7 @@
 #include "FilesStruct.h"
 
 
-void runAsServer()
+void runAsServer(char *defaultDownloadPath)
 {
     printf("Drag and Drop active as a server...\n");
     int mysock =socket(AF_INET,SOCK_STREAM,0);
@@ -50,7 +50,7 @@ void runAsServer()
     {
         int clientSocket=accept(mysock,NULL,NULL);
         printf("Connection established\n");
-        ServerLoop(clientSocket);
+        ServerLoop(clientSocket,defaultDownloadPath);
         printf("Connection ended\n");
     }
 }
@@ -165,10 +165,73 @@ void runAsClient(int argn,char *args[])
 
 int main(int argn, char* args[])
 {
+    /* Reading config */
+    char defaultDownloadFolder[1024];
+    FILE *configFile=fopen("/etc/DragAndDrop/config","r");
+    if(configFile == NULL)
+    {
+        if(mkdir("/etc/DragAndDrop",0755)!=0)
+        {
+            printf("Creating of config folder failed (privilage issue or try to remove said folder)\n");
+            exit(1);
+        }
+        configFile=fopen("/etc/DragAndDrop/config","w");
+        if(configFile == NULL)
+        {
+            printf("Creating of config file failed\n");
+            exit(1);
+        }
+        printf("Please enter your default download folder:\n");
+        if(fgets(defaultDownloadFolder,sizeof(defaultDownloadFolder),stdin) ==NULL)
+        {
+            printf("Incorrect path\n");
+            exit(1);
+        }
+        if(defaultDownloadFolder[strlen(defaultDownloadFolder)-1] != '/')
+        {
+            int id=strlen(defaultDownloadFolder);
+            defaultDownloadFolder[id] ='/';
+            defaultDownloadFolder[id+1] ='\0';
+        }
+        char msg[1500];
+        if(snprintf(msg,sizeof(msg),"%s:%s\n","defaultDownloadFolder",defaultDownloadFolder) < 0)
+        {
+            printf("snprint failed\n"); 
+        }
+        fputs(msg,configFile);
+    }
+    else
+    {
+        bool defaultFolderFound=false;
+        char line[1500];
+        while(fgets(line,sizeof(line),configFile) != NULL)
+        {
+            //printf("FILE: %s\n",line);
+            char key[128];
+            char value[1024];
+            sscanf(line,"%127[^:]:%1023[^\n]",key,value);
+            //printf("KEY: %s\n",key);
+            //printf("Value: -%s-\n",value);
+            if(strcmp(key,"defaultDownloadFolder") == 0)//defaultDownloadFolder
+            {
+                defaultFolderFound=true;
+                strcpy(defaultDownloadFolder,value);
+            }
+        }
+        if(!defaultFolderFound)
+        {
+            printf("Config file corrupted (/etc/DragAndDrop/config)\n");
+            fclose(configFile);
+            exit(1);
+        }
+    }
+
+    fclose(configFile);
+
     if(argn > 1)
     {
         if (strcmp(args[1], "-s") == 0)
-            runAsServer();
+            runAsServer(defaultDownloadFolder);
         if(strcmp(args[1], "-c") == 0)
         {
             if(argn >2)
